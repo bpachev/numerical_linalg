@@ -13,8 +13,8 @@ def mgs(A):
     if n > m:
         raise ValueError("The matrix A may not have more columns than rows.")
 
-    Q = A.copy()
-    R = np.zeros((n,n), dtype=A.dtype)
+    Q = A.astype(np.complex128)
+    R = np.zeros((n,n), dtype=np.complex128)
 
     for i in xrange(n):
         R[i,i] = np.sqrt(np.vdot(Q[:,i], Q[:,i]))
