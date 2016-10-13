@@ -20,7 +20,9 @@ if __name__ == "__main__":
     for m in m_list:
         conds.append(sum([la.cond(random_lower(m))**(1./m) for i in xrange(samples)])/ float(samples))
     print conds
-#    plt.plot(m_list, conds)
- #   plt.xscale('log')
-  #  plt.show()
- 
+    plt.plot(m_list, conds)
+    plt.xscale('log')
+    plt.xlabel("m (dimension of matrix L)")
+    plt.ylabel("average value of cond(L)^(1/m)")
+    plt.title("Plot of estimated value of C.")
+    plt.show()
