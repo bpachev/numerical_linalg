@@ -13,7 +13,9 @@ def sign(a):
     """
     Return the sign of a real number, or the complex phase for a complex number
     """
-    return np.exp(1j*np.angle(a))
+    if a == 0:
+        return 1
+    else: return a/abs(a)
 
 def house(A):
     """
@@ -34,7 +36,7 @@ def house(A):
         dim = m-k
         #now pick an appropriate v for the Householder reflection
         v =  sign(x[0]) * norm(x) * ej(dim) + x
-        v = v/norm(v)
+        v = v/norm(v)   
         W[k:, k] = v
         #Multiply the appropriate submatrix of A by the reflector
         R[k:,k:] -= 2*np.dot(v.reshape((dim, 1)), np.dot(v.reshape((1,dim)).conj(), R[k:,k:]))
