@@ -58,8 +58,7 @@ def formp(col_swaps):
         t = p[k]
         p[k] = p[col_swaps[k]]
         p[col_swaps[k]] = t
-    
-    return invert_permutation(p)
+    return p    
 
 def house(A):
     """
@@ -115,14 +114,12 @@ def pivoted_QR(A):
         col_swaps[k] = c+k
         
         #swap rows
-        tmp_row = view[r].copy()
-        view[r] = view[0]
-        view[0] = tmp_row
+        swap_rows(R, k, row_swaps[k])
         
         #swap columns
-        tmp_col = view[:,c].copy()        
-        view[:,c] = view[:,0]
-        view[:,0] = tmp_col
+        tmp_col = R[:,col_swaps[k]].copy()        
+        R[:,col_swaps[k]] = R[:,k]
+        R[:,k] = tmp_col
         
         #Compute the Householder reflection
         x = view[:,0]
@@ -144,8 +141,7 @@ def pivoted_QR(A):
 
 if __name__ == "__main__":
     max_m = 10
-    its = 1
-    max_m = 3
+    its = 10
     print "We test the pivoted QR algorithm by testing it for a variety of random matrices of all sizes."
     print "Maximum m={}, maximum tests per dimension {}".format(max_m, its)
     works = set()
@@ -156,16 +152,12 @@ if __name__ == "__main__":
                 A = np.random.random((m,n))
 #                A = np.arange(9).reshape((3,3)) + np.eye(3)
                 p, Q, R = pivoted_QR(A)
-                if not np.allclose(A, Q.dot(R).T[p].T):
-                    fails.add(tuple(p))
-                else: works.add(tuple(p))
-                
-#                    print m,n
- #                   print A
-  #                  print R                
-   #                 print Q.dot(R)
-#                    raise ValueError("The algorithm FAILED")
+                if not np.allclose(A.T[p].T, Q.dot(R)):
+                    print m,n
+                    print Q.dot(R)
+                    print A
+                    raise ValueError("The algorithm FAILED")
                     
-    print works
-    print fails
+#    print works
+ #   print fails
 
