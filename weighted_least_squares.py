@@ -21,6 +21,13 @@ def weighted_diag_lstsq(A,b, C):
     b_hat = b*d
     return la.lstsq(B, b_hat)[0]
 
+def do_plot(dom, fit, nu, title):
+    plt.plot(dom, fit, label="Fit")
+    plt.plot(dom, nu, label="Nu")
+    plt.xlabel("Ra")
+    plt.legend(loc="upper left")
+    plt.title(title)
+
 if __name__ == "__main__":
     filename = "prob2.csv"
     try:
@@ -57,30 +64,20 @@ if __name__ == "__main__":
 
     dom = ra
     plt.subplot(221)
-    plt.plot(dom, np.exp(A.dot(x)), label="Fit")
-    plt.plot(dom, np.exp(b), label="Nu")
-    plt.legend(loc="upper left")
-    plt.title("Unweighted least squares fit")
+    do_plot(dom, np.exp(A.dot(x)), nu, "Unweighted least squares fit")
 
     plt.subplot(222)
-    plt.plot(dom, np.exp(A.dot(w1)), label="Fit")
-    plt.plot(dom, np.exp(b), label="Nu")
-    plt.legend(loc="upper left")
-    plt.title("Weighted, C=nu")
+    do_plot(dom, np.exp(A.dot(w1)), nu, "Weighted, C=ra")
 
     plt.subplot(223)
-    plt.plot(dom, np.exp(A.dot(w2)), label="Fit")
-    plt.plot(dom, np.exp(b), label="Nu")
-    plt.legend(loc="upper left")
-    plt.title("Weighted C=nu^.1")
+    do_plot(dom, np.exp(A.dot(w2)), nu, "Weighted, C=ra^.1")
 
     plt.subplot(224)
-    plt.plot(dom, np.exp(A.dot(w3)), label="Fit")
-    plt.plot(dom, np.exp(b), label="Nu")
-    plt.legend(loc="upper left")
-    plt.title("Weighted C=log(nu)")
+    do_plot(dom, np.exp(A.dot(w3)), nu, "Weighted, C=log(ra)")
+    plt.tight_layout()
     plt.show()
 
+    print "Observe that greater weights on higher values of ra lead to better fits."
 
 #    a,b = np.exp(x)
     #print ra, nu
