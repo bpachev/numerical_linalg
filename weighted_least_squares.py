@@ -28,7 +28,7 @@ def do_plot(dom, fit, nu, title):
     plt.legend(loc="upper left")
     plt.title(title)
 
-if __name__ == "__main__":
+def read_google_spreadsheet():
     filename = "prob2.csv"
     try:
         f = open(filename, "r")
@@ -47,7 +47,11 @@ if __name__ == "__main__":
 
     ra = np.array(ra)
     nu = np.array(nu)
+    return ra, nu
 
+
+if __name__ == "__main__":
+    ra, nu = read_google_spreadsheet()
     #we compute a fit nu = a*ra^b
     #Taking logs naturally gives log(nu) = log(a) + log(ra)*log(b)
     n = len(ra)

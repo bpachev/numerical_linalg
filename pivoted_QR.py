@@ -1,5 +1,8 @@
 import numpy as np
 import numpy.linalg as la
+from scipy.linalg import solve_triangular
+from time import clock
+import matplotlib.pyplot as plt
 
 def ej(d,j=0):
     """
@@ -30,7 +33,7 @@ def formQ(W, swaps = None):
     """
     m,n = W.shape
     Q = np.zeros((m,n), dtype = W.dtype)
-    
+
     for k in range(n)[::-1]:
         Q[:,k] = ej(m, k)
         v = W[k:,k]
@@ -50,7 +53,7 @@ def invert_permutation(p):
 
 def formp(col_swaps):
     """
-    Given the column swaps performed while pivoting, contruct the appropriate permutation of the columns of A 
+    Given the column swaps performed while pivoting, contruct the appropriate permutation of the columns of A
     """
     n = len(col_swaps)
     p = np.arange(n)
@@ -58,7 +61,7 @@ def formp(col_swaps):
         t = p[k]
         p[k] = p[col_swaps[k]]
         p[col_swaps[k]] = t
-    return p    
+    return p
 
 def house(A):
     """
@@ -79,7 +82,7 @@ def house(A):
         dim = m-k
         #now pick an appropriate v for the Householder reflection
         v =  sign(x[0]) * la.norm(x) * ej(dim) + x
-        v = v/la.norm(v)  
+        v = v/la.norm(v)
         W[k:, k] = v
         #Multiply the appropriate submatrix of A by the reflector
         R[k:,k:] -= 2*np.dot(v.reshape((dim, 1)), np.dot(v.reshape((1,dim)).conj(), R[k:,k:]))
@@ -90,13 +93,13 @@ def pivoted_QR(A):
     """
     Description:
         A function to compute a pivoted QR factorization AP=QR, with the diagonal entries of R monotonically decreasing in magnitude.
-        We compute this by a complete pivoting approach, where when operating on the submatrix  
+        We compute this by a complete pivoting approach, where when operating on the submatrix
     Arguments:
         A -- A complex valued mxn matrix, m >= n.
     Returns: (p,Q,R)
         p -- a vector containing the n permuted indices corresponding to the permutation matrix P with AP = QR
         Q -- an mxn matrix with orthonormal columns
-        R -- an nxn upper triangular matrix with abs(R[0,0]) >= abs(R[1,1]) >= ... >= abs(R[-1, -1])        
+        R -- an nxn upper triangular matrix with abs(R[0,0]) >= abs(R[1,1]) >= ... >= abs(R[-1, -1])
     """
 
     m, n = A.shape
@@ -112,22 +115,22 @@ def pivoted_QR(A):
         r, c = np.unravel_index(np.argmax(np.abs(R[k:,k:])), (m-k,n-k))
         row_swaps[k] = r+k
         col_swaps[k] = c+k
-        
+
         #swap rows
         swap_rows(R, k, row_swaps[k])
-        
+
         #swap columns
-        tmp_col = R[:,col_swaps[k]].copy()        
+        tmp_col = R[:,col_swaps[k]].copy()
         R[:,col_swaps[k]] = R[:,k]
         R[:,k] = tmp_col
-        
+
         #Compute the Householder reflection
         x = view[:,0]
         dim = m-k
         v =  sign(x[0]) * la.norm(x) * ej(dim) + x
-        v = v/la.norm(v)   
+        v = v/la.norm(v)
         W[k:, k] = v
-        
+
         #Multiply the submatrix by the reflector
         R[k:,k:] -= 2*np.dot(v.reshape((dim, 1)), np.dot(v.reshape((1,dim)).conj(), R[k:,k:]))
 
@@ -137,9 +140,7 @@ def pivoted_QR(A):
     p = formp(col_swaps)
     return p, Q, R[:n,:n]
 
-
-
-if __name__ == "__main__":
+def test_algo():
     max_m = 10
     its = 10
     print "We test the pivoted QR algorithm by testing it for a variety of random matrices of all sizes."
@@ -157,7 +158,59 @@ if __name__ == "__main__":
                     print Q.dot(R)
                     print A
                     raise ValueError("The algorithm FAILED")
-                    
+
 #    print works
  #   print fails
 
+def pivoted_least_squares(A, b):
+    p, Q, R = pivoted_QR(A)
+    v = solve_triangular(R, Q.T.conj().dot(b))
+    #permute v
+    #NOTE: Mutliplying on the left by P permutes rows inversely to the way P permutes columns
+    return v[invert_permutation(p)]
+
+def compare_lstsq(m,n):
+    """
+    Description:
+        Compares the peformance of a built-in least squares solver to my own on a random system Ax=b
+         where A is of size m x n and b of size m
+    Returns:
+        t1 -- the time for the built-in least squares
+        t2 -- the time for my pivoted least squares
+    """
+    A = np.random.random((m,n))
+    b = np.random.random(m)
+    s = clock()
+    x1 = la.lstsq(A,b)[0]
+    t1 = clock()-s
+    s = clock()
+    x2 = pivoted_least_squares(A,b)
+    t2 = clock()-s
+    assert np.allclose(x1, x2)
+    return t1, t2
+
+if __name__ == "__main__":
+    d = 3
+    bl, ml = [],[]
+    ms = [2**i for i in xrange(7,10)]
+    for m in ms:
+        n = 100
+        built_time, my_time = compare_lstsq(m, n)
+        bl.append(built_time)
+        ml.append(my_time)
+        print "m={}, n={}".format(m,n)
+        print "Built in: {}, Mine: {}".format(built_time, my_time)
+
+    fig, axs = plt.subplots(2,1)
+    axs[0].table(cellText=np.array([bl,ml]).T, colLabels=["Built in", "Mine"], loc='top')
+    axs[0].axis("tight")
+    axs[0].axis("off")
+
+    p = axs[1]
+    p.plot(ms, bl, label="Built-in solver")
+    p.plot(ms, ml, label="My pivoted QR")
+    p.legend(loc="upper left")
+    p.set_ylabel("runtime (seconds)")
+    p.set_xlabel("m")
+    p.set_title("Fixed n = 100 with varying m")
+    plt.show()
