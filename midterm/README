@@ -1,0 +1,57 @@
+
+Below all the problems are accounted for.
+
+1: written
+
+2:
+  (a)
+    My implementation of the weighted least squares problem for a diagonal, positive semidefinite matrix C
+    is the function weighted_diag_lstsq in the file weighted_least_squares.py
+  (b)
+    Running weighted_least_squares.py produces four plots of least squares fits to the data from the google spreadsheet.
+    One fit is unweighted, while the other three use different diagonal weight matrices.
+    Recall that ra is the x-variable, and the weighted fits are supposed to weight higher ra values more heavily.
+    The three weights I chose were:
+      (1) C = diag(ra)
+      (2) C = diag(ra^.1)
+      (3) C = diag(log(ra))
+    I found that the first weighting scheme produced the best fit, and that functions that increased more aggressively with ra
+    in general improved the fit. I conjecture this is because taking logs suppresses larger values, and considers only
+    relative differences. Thus, the unweighted and low-weighted least squares methods lead to rather large absolute deviations
+    in the fit for large values of ra.
+
+    NOTE: All fits nu = a*ra^b were of course done by taking logs, since least squares can't apply directly.
+       The resulting linear regression problem log(nu) = log(a) + log(ra)*b is amenable to least squares.
+
+3:
+  My implementation is the function pivoted_QR in the file pivoted_QR.py.
+
+  To verify correctness, I wrote a script test_pivoted_QR.py. This script computes the pivoted QR factorizations of many
+  random matrices of various shapes and sizes, and verifies that all desired properties hold (that Q has orthogonal columns,
+  that R is upper triangular, that AP=QR, and that the diagonal entries of R decay in magnitude)
+
+  See the writeup for a proof of correctness. The idea is to do column pivoting with householder triangularization, and
+  to select the pivot column to have maximum norm among all candidates.
+
+  As a funny aside, I was initially inspired by the section on pivoting with Gaussian elimination,
+  and wrote a version of QR factorization that at each pivot step, selects the entry of the R_k:,k: submatrix
+  having the largest magnitude, and moved it into the k,k spot, using one row swap and one column swap.
+  This method computes   Qn* Un ... * Q1*U1 * A * P1 * ... * Pn = R, where the U's and P's are permutation matrices.
+  The U's are permutation matrices and all orthogonal, so they can be absorbed into Q, hence we can compute AP = QR.
+
+  This method seemed to produce the desired results for my initial test-cases, and it 'looked right' so I guessed it was correct.
+  I proceeded to go on and do all the other problems using this algorithm. And my results were pretty similar to the actual ones.
+  Later on, I tested this algorithm more extensively, and realized that it didn't guarantee that the diagonal entries of R always
+  decreased in magnitude. So after some thought I discovered the correct pivoting scheme, and proceeded to fix the code.
+  Fortunately, this was as simple as changing the column selection and disabling all my hard-wrought row pivoting.
+  Can I get extra credit for getting the row pivoting to work?
+
+4:
+  (a) written
+  (b)
+    Running the helpfully named prob_4b.py will produce a plot of the unweighted fit to the Problem 2 data.
+    The fit is computed by the function pivoted_least_squares in the file pivoted_QR.py.
+  (c)
+    For this problem I conducted three experiments using random matrices of shapes (2n, n), (4n, n) and (8n, n).
+    I compared my pivoted_least_squares function to the 
+    Each experiment produced two files: a plot of the runtimes for each
