@@ -1,5 +1,27 @@
+This README contains a brief description of each file in the folder, and a more lengthy discussion of
+each problem on the midterm. Comments on experimental results are given in this file.
 
-Below all the problems are accounted for.
+Files:
+
+pivoted_QR.py:
+ Contains my code for problem 3, and the other algorithms based off pivoted QR factorization
+ Running this file will run the experiments of 4(c) on your machine
+
+weighted_least_squares.py:
+  Contains code for solving the diagonal weighted least squares problem, and for reading in google spreadsheet data
+  Running this file will produce the plots for Problem 2(b)
+
+prob_4b.py:
+  Running this file will produce the plot for problem 4(b)
+  It contains code to read in the google spreadsheet data and compute an unwieghted fit with pivoted-QR-based least squares.
+
+prob2.csv:
+  A csv export of the google spreadsheet data for Problem 2.
+
+Any csv or png file starting with prob4_c_: See the discussion of Problem 4(c). An output of the experiment for that problem.
+
+
+Problems:
 
 1: written
 
@@ -67,4 +89,21 @@ Below all the problems are accounted for.
     I found that (surprise, surprise) my least squares solver is significantly slower than numpy's built-in solver. The
     log-log plots indicate that for small m, the relative difference in runtime bounces around, most likely to to lower-order
     terms in the algorithmic complexities of the respective algorithms. In each plot, there is a point after which both curves
-    become straight lines (corresponding to a )  
+    become straight lines. The lines, however, have different slope. The relative difference in time starts increasing.
+    This indicates that after that point the asymptotic complexity of my algorithm is effectively greater than numpy's least squares
+    solver.
+
+    My conjecture is that numpy's built-in is cache-aware, and tries to access memory in contiguous chunks. My implementation doesn't
+    factor in any considerations of memory contiguity. Thus, for sufficiently large matrices, my naive implementation
+    probably is causing a lot more CPU cache misses, which effectively increases the complexity of the algorithm. Examining the graphs
+    reveals that for the (2*n, n) case this transition happens for smaller m than for the (4*n, n) case, and likewise for the
+    (8*n, n) case, so roughly for the same sizes of matrices.
+
+    Another pattern I noticed was that as the ratio between m and n increases, numpy got relatively more efficient compared to my
+    pivoted QR least squares solver. I'm not entirely sure why.
+
+    I didn't find the size of matrix at which my system ran out of RAM, although I used matrices with m > 1000. My box can initialize
+    10^4 x 10^4 matrices without running out of RAM (but it's pushing it). QR factorization on something that huge would have taken many hours if not days.
+    In interest of time, I elected to instead speculate about caches.
+
+5: written
