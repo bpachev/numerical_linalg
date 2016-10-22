@@ -53,5 +53,18 @@ Below all the problems are accounted for.
     The fit is computed by the function pivoted_least_squares in the file pivoted_QR.py.
   (c)
     For this problem I conducted three experiments using random matrices of shapes (2n, n), (4n, n) and (8n, n).
-    I compared my pivoted_least_squares function to the 
-    Each experiment produced two files: a plot of the runtimes for each
+    I compared my pivoted_least_squares function to numpy's built in linalg.lstsq.
+    Each experiment produced two files: a plot of the runtimes and a csv file containing the actual times (and matrix sizes).
+    The names of the files for a given experiment depend on the shape of matrices used. For example, prob4_c_2.png
+    is the plot of runtimes from the experiment dealing with matrices of shape (2n, n), prob_c_4.png the plot for matrices of
+    shape (4n, n).
+    The following table summarizes the files.
+    Experiment  Plot            Csv
+    (2n,n)      prob4_c_2.png   prob4_c_2.csv
+    (4n,n)      prob4_c_4.png   prob4_c_4.csv
+    (8n,n)      prob4_c_8.png   prob4_c_8.csv
+
+    I found that (surprise, surprise) my least squares solver is significantly slower than numpy's built-in solver. The
+    log-log plots indicate that for small m, the relative difference in runtime bounces around, most likely to to lower-order
+    terms in the algorithmic complexities of the respective algorithms. In each plot, there is a point after which both curves
+    become straight lines (corresponding to a )  
