@@ -30,7 +30,7 @@ def parta(A, n = 32):
     CS = plt.contour(X,Y,Z, levels = epsilons[::-1])
     plt.scatter(np.sort(evals)[:3], np.zeros(3))
     plt.clabel(CS)
-    plt.title("Contour plot of the spectrum near 3 eigenvalues.")
+    plt.title("Contour plot of the pseudo-spectrum near 3 eigenvalues. part (a)")
     plt.show()
 
 def partb(A):
@@ -40,14 +40,20 @@ def partb(A):
     ts = np.linspace(0,50,npoints)
     y = np.array([cond(la.expm(t*A)) for t in ts])    
     plt.plot(ts, y)
-    plt.plot(ts, np.exp(ts*max_eval))
+#    plt.plot(ts, np.exp(ts*max_eval))
     plt.yscale('log')
+    plt.title("Plot of ||e^(A*t)|| part (b)")
     plt.show()
 
-if __name__ == "__main__":
-    n = 32
+def mk_A(n=32):
     A = diags([1,-1,1],[-1,0,1],shape=(n,n))
     A = A.todense()
-#    parta(A)
+    return A
+
+
+if __name__ == "__main__":
+    A = mk_A()
+    print "This problem was weird"    
+    parta(A)
     partb(A)
 
