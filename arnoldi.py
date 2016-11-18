@@ -1,8 +1,7 @@
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
+from scipy.sparse import diags
 
 def arnoldi(Amul,b, nits=30):
     """
@@ -11,7 +10,7 @@ def arnoldi(Amul,b, nits=30):
     m = len(b)
     Q = np.zeros((m,nits+1))
     Q[:,0] = b/la.norm(b)
-    H = np.zeros((nits+1, nits+1))
+    H = np.zeros((nits+1, nits))
     for n in xrange(nits):
         v = Amul(Q[:,n])
         for j in xrange(n+1):
@@ -35,15 +34,20 @@ def ritz_values(Amul, b, nits):
 def scatter(arr,marker='o', s=20):
     plt.scatter(np.real(arr), np.imag(arr), marker=marker, s=s)
 
-if __name__ == "__main__":
-    A = np.random.random((10,10))
-    b = np.random.random(10)
+#problem 34(b)
+def do_34b(N=64):
+    ks = np.arange(1,N+1)**-.5
+    A = diags([ks, ks[:-1]], offsets=[0,1])
+    b = np.random.random(N)
     amul = lambda x: A.dot(x)
-    rvals = ritz_values(amul, b, 6)
-    evals = la.eigvals(A)
-    step=1
-    for i in xrange(0,len(rvals),step):
+    rvals = ritz_values(amul, b, 30)
+    evals = la.eigvals(A.todense())
+    step=4
+    for i in xrange(1,len(rvals),step):
         scatter(evals)
         scatter(rvals[i], marker="+", s=40)
-        plt.title("Iteration {}".format(i))
+        plt.title("34(b) Iteration {}".format(i+1))
         plt.show()
+
+if __name__ == "__main__":
+    do_34b()
