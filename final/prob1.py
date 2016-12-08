@@ -54,7 +54,7 @@ if __name__ == "__main__":
     n = 1000
     A = mk_A(n)
     amul = lambda x: A.dot(x)
-    b = random(n)
+    b = np.ones(n)
     sol, res = CG(amul, b, max_its=50)
     plt.plot(res)
     plt.title("CG convergence on random {}x{} system".format(n,n))
