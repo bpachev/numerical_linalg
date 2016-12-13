@@ -1,8 +1,9 @@
 import numpy as np
-from scipy.linalg import norm
+from numpy.linalg import norm, lstsq
 from numpy.random import random
 import matplotlib.pyplot as plt
 from scipy.sparse import diags
+from functools import partial
 
 def CG(Amul, b, tol=1e-6, max_its = 100, return_guesses=False):
     """
@@ -96,7 +97,7 @@ def jacobi_precond(A, b, solver, **kwargs):
     """
     d = A.diagonal()
     B = A.tocsr()
-    scale_csr_rows(B, d)
+    scale_csr_rows(B, 1./d)
 
     #Solve the preconditioned system and then scale the solution appropriately
     guesses, res = solver(lambda x: B.dot(x), b/d, return_guesses=True, **kwargs)
@@ -131,21 +132,101 @@ def symmetric_jacobi(A, b, solver, **kwargs):
     
 
 def mk_A(n=200):
-    ds = [np.ones(n-100), np.ones(n-1), np.sqrt(np.arange(1,n+1)) + .5, np.ones(n-1), np.ones(n-100)]
-    A = diags(ds, offsets=[-100,-1,0,1,100])
+    if n > 100:
+        ds = [np.ones(n-100), np.ones(n-1), np.sqrt(np.arange(1,n+1)) + .5, np.ones(n-1), np.ones(n-100)]
+        A = diags(ds, offsets=[-100,-1,0,1,100])
+    else:
+        ds = [np.ones(n-1), np.sqrt(np.arange(1,n+1)) + .5, np.ones(n-1)]
+        A = diags(ds, offsets=[-1,0,1])    
     return A
 
-if __name__ == "__main__":
-    n = 1000
-    A = mk_A(n)
-    b = np.ones(n)
+
+"""
+Here we put the arnoldi and GMRES code.
+I coded up a GMRES algorithm with restarts for efficiency and for kicks.
+"""
+
+def arnoldi(Amul,b, nits=30):
+    """
+    Amul is a function that computes A
+    """
+    m = len(b)
+    Q = np.zeros((m,nits+1))
+    Q[:,0] = b/norm(b)
+    H = np.zeros((nits+1, nits))
+    for n in xrange(nits):
+        v = Amul(Q[:,n])
+        for j in xrange(n+1):
+            H[j,n] = np.inner(Q[:,j], v)
+            v -= np.inner(Q[:,j], v) * Q[:,j]
+        
+        H[n+1, n] = norm(v)
+        Q[:, n+1] = v/H[n+1, n]
+    return Q, H          
+
+def gmres(Amul, b, nits=1, return_guesses=False, tol=1e-6):
+    Q, H = arnoldi(Amul, b, nits)
+    residuals = []
+    normb = norm(b)
+    if return_guesses: guesses = []
+    for n in xrange(1, nits+1):
+        e1 = np.zeros(n+1)
+        e1[0] = normb
+        y, res = lstsq(H[:n+1, :n], e1)[:2]
+        residuals.append(res[0])
+        if return_guesses: guesses.append(Q[:,:n].dot(y))
+        if residuals[-1] < tol: break
+    
+    if return_guesses: return guesses, residuals    
+    else: return Q[:,:n].dot(y), residuals
+
+#IGNORE, not used
+def restarted_gmres(Amul, b, max_its=50, tol=1e-6, step_size=10, return_guesses=False):
+    """
+    step_size is the number of dimensions to compute before restarting
+    """
+    if return_guesses: guesses = [b]
+    residuals = []
+    sol = b
+    its_left = max_its
+    while its_left > 0:
+        its_this_step = min(step_size,  its_left)
+        if return_guesses:
+            step_guesses, step_residuals = gmres(Amul, sol, nits=its_this_step, tol=tol, return_guesses=True)
+            guesses += step_guesses
+            sol = guesses[-1]
+        else:
+            sol, step_residuals = gmres(Amul, sol, nits=its_this_step, tol=tol, return_guesses=False)
+        residuals += step_residuals
+        if residuals[-1] < tol: break
+        max_its -= step_size
+    
+    if return_guesses:
+        return guesses, residuals
+    else:
+        return sol, residuals
+
+def plot_convergence(A, b, solver, solver_name):
+    n = A.shape[0]
     amul = lambda x: A.dot(x)
-    sol, res = symmetric_jacobi(A, b, CG, max_its=50, tol=1e-14)    
-    psol, pres = CG(amul, b, max_its=50, tol=1e-6)
-    plt.plot(res)
-    plt.plot(pres)
-    plt.title("Preconditioned CG convergence on large, sparse {}x{} system".format(n,n))
+    sol, res = symmetric_jacobi(A, b, solver, tol=0)    
+    plt.plot(res, label="Symmetrically Preconditioned")
+    rsol, rres = jacobi_precond(A, b, solver, tol=1e-14)
+    plt.plot(rres, label="Left Preconditioned")
+    psol, pres = solver(amul, b,  tol=1e-6)
+    plt.plot(pres, label="Normal")
+    plt.title("Preconditioned {} convergence on large, sparse {}x{} system".format(solver_name,n,n))
     plt.ylabel("Residual")
     plt.xlabel("Iterations")
     plt.yscale("log")
+    plt.legend()
     plt.show()
+
+if __name__ == "__main__":
+    ns = [100,200, 500, 1000, 10000]
+    for n in ns:
+        A = mk_A(n)
+        b = np.ones(n)
+        plot_convergence(A, b, partial(CG, max_its=40), "CG")
+        plot_convergence(A,b,partial(gmres, nits=30), "gmres")
+    
