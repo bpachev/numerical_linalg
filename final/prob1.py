@@ -49,6 +49,42 @@ def CG(Amul, b, tol=1e-6, max_its = 100, return_guesses=False):
     if return_guesses: return guesses, residuals
     else: return x, residuals
 
+def scale_csr_rows(B, d):
+    """
+    Scale the rows of a csr matrix
+    """
+    #The nonzero entries of B are stored in B.data
+    #Because B is in csr format, B.data[inds[i]:inds[i+1]] contain the nonzero entries for the i-th row
+    inds = B.indptr
+    m = B.shape[0]
+    for i in xrange(m):
+        row_start_index = inds[i]
+        row_stop_index = inds[i+1]
+        #now scale the nonzeros entries in row i by the appropriate entry of d
+        B.data[row_start_index:row_stop_index] *= d[i]            
+    
+
+def scale_csr_columns(B, d):
+    """
+    Scale each column of a csr matrix B, with the scalars for each column
+    given in the array d
+    """
+    m = B.shape[0]
+    inds = B.indptr
+    for i in xrange(m):
+        row_start_index = inds[i]
+        row_stop_index = inds[i+1]
+        col_arr = B.indices[row_start_index: row_stop_index]
+        #The number of nonzeros in the current row
+        #Equal to row_stop_index - row_start_index
+        nonzero_columns = len(col_arr)
+        for j in xrange(nonzero_columns):
+            #Figure out the column number of this entry
+            col_number = col_arr[j]
+            #Use the column number to determine the appropriate scalar
+            B.data[row_start_index+j] *= d[col_number]
+            
+
 def jacobi_precond(A, b, solver, **kwargs):
     """
     Compute a Jacobi preconditioner    
@@ -57,35 +93,42 @@ def jacobi_precond(A, b, solver, **kwargs):
         b -- the right hand side
     
     RETURNS: (B,d)
-        B -- D^(-1) * A, where D is the diagonal matrix whose diagonal is the same as A's
-        d -- an array with the diagonal elements of A
-        
     """
     d = A.diagonal()
     B = A.tocsr()
-    #The nonzero entries of B are stored in B.data
-    #Because B is in csr format, B.data[inds[i]:inds[i+1]] contain the nonzero entries for the i-th row
-    inds = B.indptr
-    m = B.shape[0]
-#    print m, len(inds)
-    for i in xrange(m):
-        row_start_index = inds[i]
-        row_stop_index = inds[i+1]
-        #now scale the nonzeros entries in row i by the appropriate diagonal entry of A
-        #We don't want any monkey business with division by zero
-        if abs(d[i]) > 1e-15: B.data[row_start_index:row_stop_index] /= d[i]            
-        #Don't scale that row
-        else: d[i] = 1
-    print B.data
-    print A.tocsr().data
+    scale_csr_rows(B, d)
+
     #Solve the preconditioned system and then scale the solution appropriately
-#    print d, b/d
     guesses, res = solver(lambda x: B.dot(x), b/d, return_guesses=True, **kwargs)
-    sol = guesses[-1]*d
+    sol = guesses[-1]
     #We need to fix the residuals because the error from the preconditioned system won't be the same as the actual error
     for i, x in enumerate(guesses):
-        res[i] = norm(d*x-b)
+        res[i] = norm(A.dot(x)-b)
     return sol, res
+
+
+def symmetric_jacobi(A, b, solver, **kwargs):
+    """
+    Like the previous preconditioner except it does right and left preconditioning.
+    i.e D^(-1/2) A D^(-1/2) D^(1/2) x = D^(-1/2) b
+    This is needed in order to preserve symmetry.     
+    """
+    d = A.diagonal()
+    B = A.tocsr()
+    #Compute the scaling array d^(-1/2)
+    s = 1. / np.sqrt(d)
+    #Compute B = D^(-1/2) A D^(-1/2)
+    scale_csr_rows(B, s)
+    scale_csr_columns(B, s)
+
+    #Solve the preconditioned system and then scale the solution appropriately
+    guesses, res = solver(lambda x: B.dot(x), b*s, return_guesses=True, **kwargs)
+    sol = guesses[-1]*s
+    #We need to fix the residuals because the error from the preconditioned system won't be the same as the actual error
+    for i, x in enumerate(guesses):
+        res[i] = norm(A.dot(s*x)-b)
+    return sol, res
+    
 
 def mk_A(n=200):
     ds = [np.ones(n-100), np.ones(n-1), np.sqrt(np.arange(1,n+1)) + .5, np.ones(n-1), np.ones(n-100)]
@@ -97,9 +140,10 @@ if __name__ == "__main__":
     A = mk_A(n)
     b = np.ones(n)
     amul = lambda x: A.dot(x)
-    sol, res = jacobi_precond(A, b, CG, max_its=50, tol=1e-8)    
-    sol, res = CG(amul, b, max_its=50, tol=1e-8)
+    sol, res = symmetric_jacobi(A, b, CG, max_its=50, tol=1e-14)    
+    psol, pres = CG(amul, b, max_its=50, tol=1e-6)
     plt.plot(res)
+    plt.plot(pres)
     plt.title("Preconditioned CG convergence on large, sparse {}x{} system".format(n,n))
     plt.ylabel("Residual")
     plt.xlabel("Iterations")
